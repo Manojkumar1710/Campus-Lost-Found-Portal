@@ -16,14 +16,25 @@ function createToken(user) {
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
+    const normalizedName = String(name || "").trim();
     const normalizedEmail = String(email || "")
       .trim()
       .toLowerCase();
 
-    if (!name || !normalizedEmail || !password) {
+    if (!normalizedName || !normalizedEmail || !password) {
       return res.status(400).json({
         message: "Name, email, and password are required",
       });
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      return res.status(400).json({ message: "Enter a valid email address" });
+    }
+
+    if (String(password).length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
     }
 
     const existing = await User.findOne({ email: normalizedEmail });
@@ -37,7 +48,7 @@ router.post("/register", async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
 
     const user = new User({
-      name,
+      name: normalizedName,
       email: normalizedEmail,
       password: hashed,
     });
