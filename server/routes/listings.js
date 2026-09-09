@@ -1,8 +1,16 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const Listing = require("../models/Listing");
 const auth = require("../middleware/auth");
 
 const router = express.Router();
+const categories = [
+  "Electronics",
+  "Documents",
+  "Clothing",
+  "Accessories",
+  "Other",
+];
 
 function buildListingQuery(query) {
   const mongoQuery = {};
@@ -42,6 +50,37 @@ function normalizeListingPayload(body) {
   };
 }
 
+function validateListingPayload(payload) {
+  if (
+    !payload.type ||
+    !payload.title ||
+    !payload.description ||
+    !payload.category ||
+    !payload.location ||
+    !payload.date
+  ) {
+    return "type, title, description, category, location, and date are required";
+  }
+
+  if (!["LOST", "FOUND"].includes(payload.type)) {
+    return "type must be LOST or FOUND";
+  }
+
+  if (!categories.includes(payload.category)) {
+    return "category is not supported";
+  }
+
+  if (Number.isNaN(new Date(payload.date).getTime())) {
+    return "date must be valid";
+  }
+
+  if (payload.imageUrl && !/^https?:\/\//i.test(payload.imageUrl)) {
+    return "imageUrl must be a valid http or https URL";
+  }
+
+  return null;
+}
+
 router.get("/", async (req, res) => {
   try {
     const listings = await Listing.find(buildListingQuery(req.query))
@@ -56,6 +95,10 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: "Listing not found" });
+    }
+
     const listing = await Listing.findById(req.params.id).populate(
       "userId",
       "name email",
@@ -74,24 +117,9 @@ router.get("/:id", async (req, res) => {
 router.post("/", auth, async (req, res) => {
   try {
     const payload = normalizeListingPayload(req.body);
-
-    if (
-      !payload.type ||
-      !payload.title ||
-      !payload.description ||
-      !payload.category ||
-      !payload.location ||
-      !payload.date
-    ) {
-      return res.status(400).json({
-        message:
-          "type, title, description, category, location, and date are required",
-      });
-    }
-
-    if (!["LOST", "FOUND"].includes(payload.type)) {
-      return res.status(400).json({ message: "type must be LOST or FOUND" });
-    }
+    const validationMessage = validateListingPayload(payload);
+    if (validationMessage)
+      return res.status(400).json({ message: validationMessage });
 
     const listing = await Listing.create({
       ...payload,
@@ -127,6 +155,17 @@ router.patch("/:id", auth, async (req, res) => {
 
     if (payload.type && !["LOST", "FOUND"].includes(payload.type)) {
       return res.status(400).json({ message: "type must be LOST or FOUND" });
+    }
+    if (payload.category && !categories.includes(payload.category)) {
+      return res.status(400).json({ message: "category is not supported" });
+    }
+    if (payload.date && Number.isNaN(new Date(payload.date).getTime())) {
+      return res.status(400).json({ message: "date must be valid" });
+    }
+    if (payload.imageUrl && !/^https?:\/\//i.test(payload.imageUrl)) {
+      return res
+        .status(400)
+        .json({ message: "imageUrl must be a valid http or https URL" });
     }
 
     listing.type = payload.type || listing.type;
