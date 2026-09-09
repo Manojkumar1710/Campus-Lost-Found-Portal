@@ -41,6 +41,8 @@ function App() {
   const [listings, setListings] = useState([]);
   const [myListings, setMyListings] = useState([]);
   const [selectedListing, setSelectedListing] = useState(null);
+  const [activeView, setActiveView] = useState("discover");
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [message, setMessage] = useState("");
   const [token, setToken] = useState(localStorage.getItem("finditToken") || "");
   const [currentUser, setCurrentUser] = useState(
@@ -238,78 +240,143 @@ function App() {
     <div className="shell">
       <div className="backdrop" />
       <main className="app-frame">
-        <header className="hero">
-          <div>
-            <p className="eyebrow">Campus Lost & Found Portal</p>
-            <h1>Find items fast, post responsibly, and close the loop.</h1>
-            <p className="hero-copy">
-              Search listings by keyword, category, and status. Post lost or found items,
-              manage your own listings, and mark items returned when they are reunited.
-            </p>
+        <header className="topbar">
+          <div className="brand">
+            <span className="brand-mark">LF</span>
+            <div>
+              <strong>CampusFind</strong>
+              <span>Lost & found, together</span>
+            </div>
           </div>
-
-          <div className="hero-card">
-            <span>{currentUser ? `Signed in as ${currentUser.name}` : "Guest session"}</span>
-            <strong>{listings.length} active listings</strong>
-            <button type="button" className="ghost-button" onClick={handleLogout} disabled={!token}>
-              Sign out
-            </button>
-          </div>
+          <nav className="main-nav" aria-label="Main navigation">
+            <button type="button" className={activeView === "discover" ? "nav-active" : ""} onClick={() => setActiveView("discover")}>Discover</button>
+            <button type="button" className={activeView === "report" ? "nav-active" : ""} onClick={() => { if (!token) setShowAuthModal(true); else setActiveView("report"); }}>Report an item</button>
+            <button type="button" className={activeView === "activity" ? "nav-active" : ""} onClick={() => { if (!token) setShowAuthModal(true); else setActiveView("activity"); }}>My activity</button>
+          </nav>
+          <button type="button" className="profile-button" onClick={() => token ? setActiveView("account") : setShowAuthModal(true)}>
+            {currentUser && <span className="profile-avatar">{currentUser.name.charAt(0).toUpperCase()}</span>}
+            <span>{currentUser ? currentUser.name.split(" ")[0] : "Sign in"}</span>
+          </button>
         </header>
+
+        {showAuthModal && !token ? (
+          <div className="modal-overlay" onClick={() => setShowAuthModal(false)}>
+            <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+              <button type="button" className="modal-close" onClick={() => setShowAuthModal(false)}>✕</button>
+              <div className="auth-modal-content">
+                <h2>{mode === "register" ? "Create Account" : "Welcome Back"}</h2>
+                <div className="segment" style={{ marginBottom: "24px" }}>
+                  <button
+                    type="button"
+                    className={mode === "register" ? "segment-active" : ""}
+                    onClick={() => setMode("register")}
+                  >
+                    Register
+                  </button>
+                  <button
+                    type="button"
+                    className={mode === "login" ? "segment-active" : ""}
+                    onClick={() => setMode("login")}
+                  >
+                    Login
+                  </button>
+                </div>
+                <form className="stack" onSubmit={(e) => { submitAuth(e); setShowAuthModal(false); }}>
+                  {mode === "register" ? (
+                    <input
+                      type="text"
+                      name="name"
+                      placeholder="Full name"
+                      value={authForm.name}
+                      onChange={handleAuthChange}
+                    />
+                  ) : null}
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Email address"
+                    value={authForm.email}
+                    onChange={handleAuthChange}
+                  />
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="Password"
+                    value={authForm.password}
+                    onChange={handleAuthChange}
+                  />
+                  <button type="submit" className="auth-submit-btn">{mode === "register" ? "Register" : "Login"}</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {message ? <div className="banner">{message}</div> : null}
 
-        <section className="auth-grid">
-          <article className="panel">
-            <div className="panel-header">
-              <h2>{mode === "register" ? "Create account" : "Welcome back"}</h2>
-              <div className="segment">
-                <button
-                  type="button"
-                  className={mode === "register" ? "segment-active" : ""}
-                  onClick={() => setMode("register")}
-                >
-                  Register
-                </button>
-                <button
-                  type="button"
-                  className={mode === "login" ? "segment-active" : ""}
-                  onClick={() => setMode("login")}
-                >
-                  Login
-                </button>
-              </div>
+        {activeView === "discover" ? <section className="view-section">
+          <div className="page-heading">
+            <div>
+              <p className="eyebrow">The campus community board</p>
+              <h1>Find what matters.</h1>
+              <p>Search recent lost and found reports from around campus.</p>
             </div>
-
-            <form className="stack" onSubmit={submitAuth}>
-              {mode === "register" ? (
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Full name"
-                  value={authForm.name}
-                  onChange={handleAuthChange}
-                />
-              ) : null}
-              <input
-                type="email"
-                name="email"
-                placeholder="Email address"
-                value={authForm.email}
-                onChange={handleAuthChange}
-              />
-              <input
-                type="password"
-                name="password"
-                placeholder="Password"
-                value={authForm.password}
-                onChange={handleAuthChange}
-              />
-              <button type="submit">{mode === "register" ? "Register" : "Login"}</button>
-            </form>
+            <div className="stat-chip"><strong>{listings.length}</strong><span>open reports</span></div>
+          </div>
+          <section className="filters panel">
+            <div className="filter-label">Find an item</div>
+            <div className="filter-row">
+              <input type="search" placeholder="Search by keyword" value={search} onChange={(event) => setSearch(event.target.value)} />
+              <select value={category} onChange={(event) => setCategory(event.target.value)}>
+                <option value="">All categories</option><option value="Electronics">Electronics</option><option value="Documents">Documents</option><option value="Clothing">Clothing</option><option value="Accessories">Accessories</option><option value="Other">Other</option>
+              </select>
+              <select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">All statuses</option><option value="Pending">Pending</option><option value="Returned">Returned</option></select>
+            </div>
+          </section>
+          <article className="panel list-panel">
+            <div className="panel-header"><div><p className="section-kicker">Latest reports</p><h2>Browse listings</h2></div><span>{listings.length} result(s)</span></div>
+            <div className="cards">
+              {listings.length ? listings.map((listing) => (
+                <button key={listing._id} type="button" className="listing-card" onClick={() => openDetail(listing)}>
+                  <div className="listing-topline"><span className={`badge ${listing.type === "FOUND" ? "found" : "lost"}`}>{listing.type}</span><span className={`badge ${listing.status === "Returned" ? "returned" : "pending"}`}>{listing.status}</span></div>
+                  <h3>{listing.title}</h3><p>{listing.description}</p><div className="meta"><span>{listing.category}</span><span>{listing.location}</span><span>{formatDate(listing.date)}</span></div>
+                </button>
+              )) : <div className="empty-state"><strong>No reports found</strong><span>Try a different search or category.</span></div>}
+            </div>
           </article>
+        </section> : null}
 
-          <article className="panel accent-panel">
+        {activeView === "account" ? <section className="view-section narrow-view"><div className="page-heading"><div><p className="eyebrow">Your account</p><h1>Profile & Settings</h1><p>Manage your account and preferences.</p></div></div><article className="panel account-panel">
+            {token && currentUser ? (
+              <div className="account-info">
+                <div className="user-card">
+                  <div className="user-avatar-large">{currentUser.name.charAt(0).toUpperCase()}</div>
+                  <div>
+                    <h3>{currentUser.name}</h3>
+                    <p>{currentUser.email}</p>
+                  </div>
+                </div>
+                <div className="account-stats">
+                  <div className="stat">
+                    <strong>{myListings.length}</strong>
+                    <span>Reports created</span>
+                  </div>
+                  <div className="stat">
+                    <strong>{myListings.filter(l => l.status === "Returned").length}</strong>
+                    <span>Items returned</span>
+                  </div>
+                </div>
+                <button type="button" className="danger" onClick={() => { handleLogout(); setActiveView("discover"); }}>Sign out</button>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <strong>Not signed in</strong>
+                <span>Click "Sign in" in the top right to create an account or log in.</span>
+              </div>
+            )}
+          </article></section> : null}
+
+        {activeView === "report" ? <section className="view-section narrow-view"><div className="page-heading"><div><p className="eyebrow">Make a report</p><h1>{editingListingId ? "Update your report" : "Report an item"}</h1><p>Give your campus community enough detail to identify and return it.</p></div></div><article className="panel accent-panel">
             <h2>{editingListingId ? "Edit listing" : "Post an item"}</h2>
             <p>Create a lost or found listing with an image URL and campus location.</p>
 
@@ -374,69 +441,14 @@ function App() {
                 </button>
               ) : null}
             </form>
-          </article>
-        </section>
+          </article></section> : null}
 
-        <section className="filters panel">
-          <div className="row">
-            <input
-              type="search"
-              placeholder="Search by keyword"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
-              <option value="">All categories</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Documents">Documents</option>
-              <option value="Clothing">Clothing</option>
-              <option value="Accessories">Accessories</option>
-              <option value="Other">Other</option>
-            </select>
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="">All statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="Returned">Returned</option>
-            </select>
-          </div>
-        </section>
-
-        <section className="content-grid">
-          <article className="panel list-panel">
+        {activeView === "activity" ? <section className="view-section"><div className="page-heading"><div><p className="eyebrow">Your contribution</p><h1>My activity</h1><p>Keep track of the items you have reported and help close the loop.</p></div><button type="button" className="primary-button" onClick={() => setActiveView("report")}>+ New report</button></div><article className="panel list-panel">
             <div className="panel-header">
-              <h2>Browse listings</h2>
-              <span>{listings.length} result(s)</span>
+              <div><p className="section-kicker">Your reports</p><h2>My listings</h2></div><span>{myListings.length} owned item(s)</span>
             </div>
             <div className="cards">
-              {listings.map((listing) => (
-                <button key={listing._id} type="button" className="listing-card" onClick={() => openDetail(listing)}>
-                  <div className="listing-topline">
-                    <span className={`badge ${listing.type === "FOUND" ? "found" : "lost"}`}>
-                      {listing.type}
-                    </span>
-                    <span className={`badge ${listing.status === "Returned" ? "returned" : "pending"}`}>
-                      {listing.status}
-                    </span>
-                  </div>
-                  <h3>{listing.title}</h3>
-                  <p>{listing.description}</p>
-                  <div className="meta">
-                    <span>{listing.category}</span>
-                    <span>{listing.location}</span>
-                    <span>{formatDate(listing.date)}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </article>
-
-          <article className="panel list-panel">
-            <div className="panel-header">
-              <h2>My listings</h2>
-              <span>{myListings.length} owned item(s)</span>
-            </div>
-            <div className="cards">
-              {myListings.map((listing) => (
+              {myListings.length ? myListings.map((listing) => (
                 <div key={listing._id} className="listing-card owned-card">
                   <div className="listing-topline">
                     <span className={`badge ${listing.type === "FOUND" ? "found" : "lost"}`}>
@@ -460,10 +472,9 @@ function App() {
                     </button>
                   </div>
                 </div>
-              ))}
+              )) : <div className="empty-state"><strong>{token ? "No reports yet" : "Sign in to see your reports"}</strong><span>{token ? "Your submitted items will appear here." : "Your personal activity is private to your account."}</span></div>}
             </div>
-          </article>
-        </section>
+          </article></section> : null}
 
         {selectedListing ? (
           <section className="detail panel">
