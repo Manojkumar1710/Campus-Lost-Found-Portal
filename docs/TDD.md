@@ -1,145 +1,401 @@
-# Technical Design Document (TDD)
+# Technical Design Document
 
-**Project Name:** CampusFind — Campus Lost & Found Portal
+## CampusFind: Campus Lost & Found Portal
 
----
+**Version:** 1.0
+**Status:** Implemented MVP
+**Last updated:** September 2026
 
-## A. Tech Stack
-- **Frontend:** React (Vite), Tailwind CSS
-- **Backend:** Node.js with Express
-- **Database:** MongoDB Atlas
-- **Auth:** JWT (JSON Web Tokens)
-- **Testing:** Postman,Swagger Ui (backend), React Testing Library (frontend)
-- **Image Handling (MVP):** Image URL field, OR base64 string stored in DB (no cloud storage for MVP)
+## 1. Purpose
 
-## B. Testing Policy — Red-Green-Refactor (Mandatory)
-Every API endpoint in this project **must** be built using the Red-Green-Refactor cycle:
-1. **Red:** Write a failing test first that describes the expected behavior of the endpoint (e.g., "returns 401 if no token provided").
-2. **Green:** Write the minimum code required to make that test pass.
-3. **Refactor:** Clean up the implementation (naming, structure, duplication) while keeping the test green.
+CampusFind is a web application that helps students report, discover, and manage lost and found items on campus. Users can create lost or found reports, search the community listings, view item details, contact reporters by email, and manage the reports they own.
 
-No endpoint may be merged to `main` without an accompanying test file demonstrating this cycle was followed (commit history should show a failing test commit before the passing implementation commit).
+This document describes the technical design of the working application.
 
-## C. API Design
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|----------------|
-| POST | `/api/auth/register` | Create a new user account | No |
-| POST | `/api/auth/login` | Authenticate and return JWT | No |
-| GET | `/api/listings` | Fetch all listings (supports `?search=&category=&status=` query params) | No |
-| GET | `/api/listings/:id` | Fetch a single listing's full detail | No |
-| POST | `/api/listings` | Create a new Lost/Found listing | Yes |
-| PATCH | `/api/listings/:id` | Update listing details (owner only) | Yes |
-| PATCH | `/api/listings/:id/status` | Change status to `Returned` (owner only) | Yes |
-| DELETE | `/api/listings/:id` | Delete a listing (owner only) | Yes |
-| GET | `/api/users/me/listings` | Fetch listings belonging to the logged-in user | Yes |
+## 2. Scope
 
-## D. Database Schema (Prisma)
+### In scope
 
-```prisma
-model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  password  String
-  name      String
-  createdAt DateTime  @default(now())
-  listings  Listing[]
-}
+- User registration and login
+- JWT-based authentication
+- Lost and found listing creation
+- Listing search and filtering
+- Listing detail view
+- Image URL support
+- Owner-only edit, delete, and resolve actions
+- User report history
+- Responsive React interface
+- MongoDB persistence
+- Vercel frontend deployment
+- Render backend deployment
 
-model Listing {
-  id          Int      @id @default(autoincrement())
-  type        String   // "LOST" or "FOUND"
-  title       String
-  description String
-  category    String   // Electronics, Documents, Clothing, Accessories, Other
-  location    String
-  imageUrl    String?
-  status      String   @default("Pending") // "Pending" | "Returned"
-  date        DateTime
-  createdAt   DateTime @default(now())
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-}
+### Out of scope
+
+The current API and database models do not implement the following features:
+
+- Claims and claim approval workflows
+- In-app messaging
+- Notifications
+- File uploads or cloud image storage
+- Admin moderation and roles
+- Multiple campuses
+- Automatic archiving
+
+These features must not be represented as working functionality until their backend contracts and data models are designed and implemented.
+
+## 3. Architecture
+
+```text
+Browser
+  |
+  | HTTPS / JSON API requests
+  v
+Vercel React/Vite frontend
+  |
+  | Axios, VITE_API_URL
+  v
+Render Express API
+  |
+  | Mongoose
+  v
+MongoDB Atlas
 ```
 
-## E. Implementation Strategy
-- **Phase 1 (Database):** Set up MongoDB Atlas, define Prisma schema for `User` and `Listing`, run initial migration.
-- **Phase 2 (Backend):** Build and test (Red-Green-Refactor) all auth and listing endpoints. JWT middleware protects create/update/delete/status routes and enforces ownership checks.
-- **Phase 3 (Frontend):** Build listing creation form, browse/search/filter view, listing detail page, and "My Listings" page.
-- **Phase 4 (Deployment):** Frontend on Vercel, backend on Render/Railway.
+### Frontend
 
----
+- React 19
+- Vite 8
+- Axios for HTTP requests
+- CSS design tokens and responsive media queries
+- Browser local storage for the JWT and basic logged-in user information
 
-## How to Start
-1. Create a shared GitHub Repository.
-2. Populate `BRD.md` and `TDD.md` in the `/docs` folder.
-3. **No code should be written until these files are committed and reviewed by the group.**
+### Backend
 
----
+- Node.js
+- Express 5
+- Mongoose 9
+- JSON Web Tokens
+- bcrypt password hashing
+- CORS
+- dotenv environment configuration
 
-## F. Sprint & Story Breakdown
+### Deployment
 
-### Sprint 1: Infrastructure & Auth (The Foundation)
-**Goal:** Get the environment ready and ensure users can securely enter the system.
+- Frontend: Vercel, using the `client` directory
+- Backend: Render, using the `server` directory
+- Database: MongoDB Atlas
 
-- **Story 1 — Database Setup**
-  As a Developer, I want to initialize the database with `User` and `Listing` schemas so that we have a structured way to store data.
-  *Acceptance Criteria:* Prisma client generated; migration applied to local Postgres instance.
+## 4. Repository Structure
 
-- **Story 2 — User Registration**
-  As a User, I want to sign up with an email and password so that I can have a private account.
-  *Acceptance Criteria:* Password encrypted (bcrypt); test written first (Red) confirming 201 on valid signup and 400 on duplicate email (Green); user record saved in DB.
+```text
+client/
+  src/
+    App.jsx              Main React application and UI flows
+    App.css              Visual tokens, layouts, responsive rules, animations
+    index.css            Global document reset
+    main.jsx             React entry point
+    services/api.js      Axios client and API error helpers
+  package.json
 
-- **Story 3 — User Authentication**
-  As a User, I want to log in to my account so that I can post and manage listings.
-  *Acceptance Criteria:* Test-first confirms valid login returns JWT; unauthorized attempts return 401.
+server/
+  server.js              Express application entry point
+  middleware/auth.js     JWT authentication middleware
+  models/User.js         User Mongoose schema
+  models/Listing.js      Listing Mongoose schema
+  routes/auth.js         Registration and login endpoints
+  routes/listings.js     Listing CRUD and status endpoints
+  routes/users.js        Current-user listing endpoint
+  package.json
 
-### Sprint 2: Core Functionality (The Build)
-**Goal:** Enable the primary workflow — posting, browsing, and searching listings.
+docs/
+  BRD.md                 Business requirements
+  TDD.md                 Technical design
+```
 
-- **Story 4 — API: Create Listing**
-  As a User, I want to post a lost or found item so that others can see it.
-  *Acceptance Criteria:* Validates required fields (type, title, category, location); returns created listing; only accessible with valid JWT.
+## 5. Data Model
 
-- **Story 5 — API: Search & Filter Listings**
-  As a User, I want to search and filter listings by keyword, category, and status so that I can quickly find relevant items.
-  *Acceptance Criteria:* `GET /api/listings` supports combinable query params; test-first covers empty results and matching results.
+### User
 
-- **Story 6 — Frontend: Post Item Form**
-  As a User, I want a form to submit a lost/found item, including an image URL, so that I don't need API tools.
-  *Acceptance Criteria:* Form validates required fields; image preview renders from URL; triggers API call on submit.
+Collection: `users`
 
-- **Story 7 — Frontend: Browse & Search UI**
-  As a User, I want to browse and filter listings visually so that I can find my item without technical knowledge.
-  *Acceptance Criteria:* Search bar and category/status dropdowns update the listing grid in real time.
+| Field      | Type     | Rules                                |
+| ---------- | -------- | ------------------------------------ |
+| `_id`      | ObjectId | MongoDB generated identifier         |
+| `name`     | String   | Required, trimmed                    |
+| `email`    | String   | Required, unique, lowercase, trimmed |
+| `password` | String   | Required, bcrypt hash only           |
 
-### Sprint 3: Status Tracking & Polish (The Reunion)
-**Goal:** Close the loop — let users manage and resolve their listings, and ensure the app is reliable.
+Passwords are never stored in plain text and are not returned by the authentication responses.
 
-- **Story 8 — API: Update Status**
-  As a User, I want to mark my listing as "Returned" so that others know it's no longer active.
-  *Acceptance Criteria:* Only the listing owner can change status; test-first confirms 403 for non-owners; status only moves Pending → Returned.
+### Listing
 
-- **Story 9 — API/Frontend: Delete & Edit Listing**
-  As a User, I want to edit or delete my own listing so that my records stay accurate.
-  *Acceptance Criteria:* Ownership enforced server-side; UI only shows edit/delete buttons on the user's own listings.
+Collection: `listings`
 
-- **Story 10 — Frontend: My Listings Dashboard**
-  As a User, I want to see all my posted listings in one place so that I can manage their status.
-  *Acceptance Criteria:* Dashboard lists user's listings with status badges and edit/delete/mark-returned actions.
+| Field         | Type     | Rules                                          |
+| ------------- | -------- | ---------------------------------------------- |
+| `_id`         | ObjectId | MongoDB generated identifier                   |
+| `type`        | String   | Required; `LOST` or `FOUND`                    |
+| `title`       | String   | Required, trimmed                              |
+| `description` | String   | Required, trimmed                              |
+| `category`    | String   | Required; supported category value             |
+| `location`    | String   | Required, trimmed                              |
+| `imageUrl`    | String   | Optional HTTP/HTTPS URL                        |
+| `status`      | String   | `Pending` or `Returned`; defaults to `Pending` |
+| `date`        | Date     | Required                                       |
+| `userId`      | ObjectId | Required reference to `User`                   |
+| `createdAt`   | Date     | Mongoose timestamp                             |
+| `updatedAt`   | Date     | Mongoose timestamp                             |
 
-- **Story 11 — Quality Assurance & Bug Bash**
-  As a Team, we want to perform a code audit so that we remove any "vibe-coded" technical debt.
-  *Acceptance Criteria:* Every endpoint has a Red-Green-Refactor test suite; no console errors; all code documented.
+Supported categories:
 
----
+- Electronics
+- Documents
+- Clothing
+- Accessories
+- Other
 
-## G. Definition of Done (DoD)
-Applies to every story above:
-- [ ] **Code Reviewed:** At least one other team member has read the PR.
-- [ ] **Test-Driven:** Red-Green-Refactor cycle followed and visible in commit history.
-- [ ] **Deployed:** The feature works in the development environment.
-- [ ] **Merged:** The code is in the `main` branch.
+## 6. Authentication and Authorization
 
-## H. Board Management
-Create a Kanban board with columns:
-`Backlog` → `In Progress` (assigned to student) → `Peer Review` (needs teammate check) → `Done` (merged to main).
+### Registration
+
+1. The client submits name, email, and password.
+2. The server trims and normalizes the email address.
+3. The server validates required fields, email format, and minimum password length.
+4. bcrypt hashes the password.
+5. The user is saved to MongoDB.
+6. The server returns a signed JWT and safe user details.
+
+### Login
+
+1. The client submits email and password.
+2. The server normalizes the email and finds the user.
+3. bcrypt compares the submitted password with the stored hash.
+4. The server returns a seven-day JWT and safe user details.
+
+### Protected requests
+
+The client sends:
+
+```http
+Authorization: Bearer <jwt>
+```
+
+The authentication middleware verifies the token using `JWT_SECRET` and attaches the user identity to the request.
+
+### Ownership rules
+
+Only the listing owner can:
+
+- Update a listing
+- Delete a listing
+- Change `Pending` to `Returned`
+
+These rules are enforced on the server. Frontend visibility controls are not treated as security boundaries.
+
+## 7. API Contract
+
+Base URL:
+
+```text
+/api
+```
+
+| Method   | Endpoint               | Auth       | Purpose                                 |
+| -------- | ---------------------- | ---------- | --------------------------------------- |
+| `POST`   | `/auth/register`       | No         | Create a user and return a JWT          |
+| `POST`   | `/auth/login`          | No         | Authenticate a user and return a JWT    |
+| `GET`    | `/listings`            | No         | List reports with optional filters      |
+| `GET`    | `/listings/:id`        | No         | Return one report with reporter details |
+| `POST`   | `/listings`            | Yes        | Create a lost or found report           |
+| `PATCH`  | `/listings/:id`        | Yes, owner | Update report details                   |
+| `PATCH`  | `/listings/:id/status` | Yes, owner | Mark a report as returned               |
+| `DELETE` | `/listings/:id`        | Yes, owner | Delete a report                         |
+| `GET`    | `/users/me/listings`   | Yes        | Return the logged-in user's reports     |
+
+### Listing query parameters
+
+`GET /listings` supports:
+
+- `search`: searches title, description, and location
+- `category`: exact category filter
+- `status`: `Pending` or `Returned`
+- `type`: `LOST` or `FOUND`
+
+Example:
+
+```text
+/api/listings?search=wallet&type=LOST&category=Accessories&status=Pending
+```
+
+### Common status codes
+
+| Status | Meaning                             |
+| ------ | ----------------------------------- |
+| `200`  | Successful read or update           |
+| `201`  | Resource created                    |
+| `400`  | Invalid input                       |
+| `401`  | Missing, invalid, or expired JWT    |
+| `403`  | Authenticated user is not the owner |
+| `404`  | Listing or resource not found       |
+| `500`  | Unexpected server failure           |
+
+## 8. Frontend Design
+
+The application uses a single React shell with view state for:
+
+- Discover and browse listings
+- Report creation and editing
+- My reports
+- Profile and settings
+- Authentication modal
+- Listing detail modal
+
+The frontend preserves live API data and does not use mock listings or fake statistics.
+
+### UI states
+
+API-driven areas provide:
+
+- Loading skeletons
+- Empty states
+- Human-readable error toasts
+- Success feedback
+- Disabled submit buttons during requests
+
+### Responsive behavior
+
+The CSS adapts through fluid typography and breakpoints for:
+
+- Desktop
+- Laptop
+- Tablet
+- Mobile
+
+The hero uses layered decorative cards with lightweight CSS transforms and respects `prefers-reduced-motion`.
+
+## 9. Configuration
+
+### Local backend: `server/.env`
+
+```env
+MONGO_URI=mongodb+srv://USER:PASSWORD@cluster.mongodb.net/campus-lost-found
+JWT_SECRET=replace-with-a-long-random-secret
+PORT=5000
+```
+
+### Vercel frontend environment variable
+
+```env
+VITE_API_URL=https://your-render-service.onrender.com/api
+```
+
+Secrets must be configured in hosting-provider environment settings and must not be committed to Git.
+
+## 10. Local Development
+
+Install dependencies:
+
+```powershell
+cd server
+npm install
+
+cd ..\client
+npm install
+```
+
+Run the backend:
+
+```powershell
+cd server
+npm run dev
+```
+
+Run the frontend in a second terminal:
+
+```powershell
+cd client
+npm run dev
+```
+
+Default local addresses:
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:5000`
+
+## 11. Deployment Procedure
+
+### Backend on Render
+
+- Repository: `Manojkumar1710/Campus-Lost-Found-Portal`
+- Root directory: `server`
+- Build command: `npm install`
+- Start command: `npm start`
+- Required environment variables: `MONGO_URI`, `JWT_SECRET`, and `PORT`
+
+### Frontend on Vercel
+
+- Repository: `Manojkumar1710/Campus-Lost-Found-Portal`
+- Root directory: `client`
+- Framework: Vite
+- Build command: `npm run build`
+- Output directory: `dist`
+- Required environment variable: `VITE_API_URL`
+
+## 12. Validation and Testing
+
+### Existing checks
+
+```powershell
+cd client
+npm run lint
+npm run build
+
+cd ..\server
+node --check server.js
+node --check routes/auth.js
+node --check routes/listings.js
+```
+
+The server currently has a placeholder test script and does not yet contain automated endpoint tests.
+
+### Manual acceptance checklist
+
+- Register with valid details
+- Reject invalid registration input
+- Log in with valid credentials
+- Reject invalid login credentials
+- Browse listings without signing in
+- Search by title, description, and location
+- Filter by type, category, and status
+- View listing details
+- Require authentication before creating a report
+- Create a lost report
+- Create a found report
+- Edit an owned report
+- Delete an owned report
+- Mark an owned report as returned
+- Confirm another user cannot edit, delete, or resolve the report
+- Confirm data persists after refresh
+- Test desktop, tablet, and mobile widths
+- Test the deployed Vercel frontend against the deployed Render API
+
+## 13. Known Limitations and Future Work
+
+- Automated backend and frontend tests should be added.
+- The API currently returns populated reporter email for the MVP contact workflow; production privacy requirements should be reviewed before wider deployment.
+- Image handling currently accepts URLs only.
+- Pagination is not currently implemented.
+- Rate limiting, structured logging, and centralized error middleware should be added for a larger production deployment.
+- Claims, notifications, admin roles, and messaging require new models, endpoints, and authorization rules.
+
+## 14. Definition of Done
+
+A change is complete when:
+
+- Existing API contracts and business behavior are preserved.
+- Client lint and production build pass.
+- Backend syntax checks pass.
+- Relevant manual acceptance checks pass.
+- Responsive behavior is checked at desktop, tablet, and mobile widths.
+- Secrets are excluded from Git.
+- The change is reviewed and deployed through the appropriate hosting service.
