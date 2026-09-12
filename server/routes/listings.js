@@ -1,7 +1,9 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const multer = require("multer");
 const Listing = require("../models/Listing");
 const auth = require("../middleware/auth");
+const { isConfigured, uploadImage } = require("../services/cloudinary");
 
 const router = express.Router();
 const categories = [
@@ -11,6 +13,58 @@ const categories = [
   "Accessories",
   "Other",
 ];
+const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, callback) => {
+    if (!allowedImageTypes.has(file.mimetype)) {
+      return callback(
+        new Error("Only JPEG, PNG, and WebP images are supported"),
+      );
+    }
+    callback(null, true);
+  },
+});
+
+function parseImageUpload(req, res, next) {
+  if (!req.is("multipart/form-data")) return next();
+
+  upload.single("image")(req, res, (error) => {
+    if (error) {
+      if (
+        error instanceof multer.MulterError &&
+        error.code === "LIMIT_FILE_SIZE"
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Image must be 5 MB or smaller" });
+      }
+      return res
+        .status(400)
+        .json({ message: error.message || "Unable to read image upload" });
+    }
+    next();
+  });
+}
+
+async function resolveImageUrl(req, res) {
+  if (!req.file) return undefined;
+  if (!isConfigured()) {
+    res
+      .status(503)
+      .json({ message: "Image uploads are not configured on the server" });
+    return null;
+  }
+
+  try {
+    const result = await uploadImage(req.file.buffer);
+    return result.secure_url;
+  } catch (error) {
+    res.status(502).json({ message: "Unable to upload image" });
+    return null;
+  }
+}
 
 function buildListingQuery(query) {
   const mongoQuery = {};
@@ -114,9 +168,14 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/", auth, async (req, res) => {
+router.post("/", auth, parseImageUpload, async (req, res) => {
   try {
-    const payload = normalizeListingPayload(req.body);
+    const imageUrl = await resolveImageUrl(req, res);
+    if (req.file && imageUrl === null) return;
+    const payload = normalizeListingPayload({
+      ...req.body,
+      imageUrl: imageUrl ?? req.body.imageUrl,
+    });
     const validationMessage = validateListingPayload(payload);
     if (validationMessage)
       return res.status(400).json({ message: validationMessage });
@@ -137,7 +196,7 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
-router.patch("/:id", auth, async (req, res) => {
+router.patch("/:id", auth, parseImageUpload, async (req, res) => {
   try {
     const listing = await Listing.findById(req.params.id);
 
@@ -151,7 +210,12 @@ router.patch("/:id", auth, async (req, res) => {
         .json({ message: "You can only edit your own listing" });
     }
 
-    const payload = normalizeListingPayload(req.body);
+    const imageUrl = await resolveImageUrl(req, res);
+    if (req.file && imageUrl === null) return;
+    const payload = normalizeListingPayload({
+      ...req.body,
+      imageUrl: imageUrl ?? req.body.imageUrl,
+    });
 
     if (payload.type && !["LOST", "FOUND"].includes(payload.type)) {
       return res.status(400).json({ message: "type must be LOST or FOUND" });

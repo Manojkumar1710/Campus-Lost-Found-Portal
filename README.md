@@ -26,6 +26,9 @@ Create `server/.env`:
 MONGO_URI=mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/campus-lost-found
 JWT_SECRET=replace-with-a-long-random-secret
 PORT=5000
+CLOUDINARY_CLOUD_NAME=cg7ay8ro
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 Do not commit `.env` or expose database credentials in source control. If the database password contains characters such as `@`, `#`, or `/`, URL-encode them in the MongoDB URI.
@@ -125,4 +128,4 @@ docs/                   Product and technical documentation
 
 The current backend supports the MVP workflow: authentication, listing CRUD, search/filtering, item details, image URLs, and returned status tracking.
 
-Claims, notifications, messaging, file uploads, and admin moderation are not implemented because they are not supported by the current API or database models.
+Uploaded listing images use the Cloudinary backend integration and are stored as URLs in the existing `Listing.imageUrl` field. Gallery uploads are supported for lost and found reports; camera capture is available for found reports only. Existing JSON listing requests and URL images remain supported.
