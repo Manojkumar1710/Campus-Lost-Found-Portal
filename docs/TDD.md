@@ -1,6 +1,6 @@
 # Technical Design Document (TDD)
 
-**Project Name:** FindIt — Campus Lost & Found Portal
+**Project Name:** CampusFind — Campus Lost & Found Portal
 
 ---
 
