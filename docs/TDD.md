@@ -7,9 +7,9 @@
 ## A. Tech Stack
 - **Frontend:** React (Vite), Tailwind CSS
 - **Backend:** Node.js with Express
-- **Database:** PostgreSQL with Prisma ORM
+- **Database:** MongoDB Atlas
 - **Auth:** JWT (JSON Web Tokens)
-- **Testing:** Jest + Supertest (backend), React Testing Library (frontend)
+- **Testing:** Postman,Swagger Ui (backend), React Testing Library (frontend)
 - **Image Handling (MVP):** Image URL field, OR base64 string stored in DB (no cloud storage for MVP)
 
 ## B. Testing Policy — Red-Green-Refactor (Mandatory)
