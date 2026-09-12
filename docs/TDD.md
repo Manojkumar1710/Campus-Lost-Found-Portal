@@ -379,7 +379,6 @@ The server currently has a placeholder test script and does not yet contain auto
 - Test desktop, tablet, and mobile widths
 - Test the deployed Vercel frontend against the deployed Render API
 
-
 ## 13. Product Stories
 
 ### Story 1: Create an account and sign in
@@ -442,7 +441,16 @@ As a student using a desktop, tablet, or phone, I want the portal to remain read
 - The hero card animation is subtle and respects `prefers-reduced-motion`.
 - The production client builds successfully and connects to the deployed API.
 
-## 14. Definition of Done
+## 14. Known Limitations and Future Work
+
+- Automated backend and frontend tests should be added.
+- The API currently returns populated reporter email for the MVP contact workflow; production privacy requirements should be reviewed before wider deployment.
+- Listing image uploads require Cloudinary environment variables in the backend deployment.
+- Pagination is not currently implemented.
+- Rate limiting, structured logging, and centralized error middleware should be added for a larger production deployment.
+- Claims, notifications, admin roles, and messaging require new models, endpoints, and authorization rules.
+
+## 15. Definition of Done
 
 A change is complete when:
 
