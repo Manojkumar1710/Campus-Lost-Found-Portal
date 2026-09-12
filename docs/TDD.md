@@ -62,7 +62,7 @@ model Listing {
 ```
 
 ## E. Implementation Strategy
-- **Phase 1 (Database):** Set up Postgres, define Prisma schema for `User` and `Listing`, run initial migration.
+- **Phase 1 (Database):** Set up MongoDB Atlas, define Prisma schema for `User` and `Listing`, run initial migration.
 - **Phase 2 (Backend):** Build and test (Red-Green-Refactor) all auth and listing endpoints. JWT middleware protects create/update/delete/status routes and enforces ownership checks.
 - **Phase 3 (Frontend):** Build listing creation form, browse/search/filter view, listing detail page, and "My Listings" page.
 - **Phase 4 (Deployment):** Frontend on Vercel, backend on Render/Railway.
