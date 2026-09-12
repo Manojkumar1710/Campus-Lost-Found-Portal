@@ -126,3 +126,5 @@ docs/                   Product and technical documentation
 The current backend supports the MVP workflow: authentication, listing CRUD, search/filtering, item details, image URLs, and returned status tracking.
 
 Claims, notifications, messaging, file uploads, and admin moderation are not implemented because they are not supported by the current API or database models.
+
+The project is ready for future feature enhancements.
