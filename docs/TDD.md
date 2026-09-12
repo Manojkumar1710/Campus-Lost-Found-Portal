@@ -388,7 +388,69 @@ The server currently has a placeholder test script and does not yet contain auto
 - Rate limiting, structured logging, and centralized error middleware should be added for a larger production deployment.
 - Claims, notifications, admin roles, and messaging require new models, endpoints, and authorization rules.
 
-## 14. Definition of Done
+## 14. Product Stories
+
+### Story 1: Create an account and sign in
+
+As a campus user, I want to register and sign in securely so that I can manage my own lost and found reports.
+
+**Acceptance criteria:**
+
+- A user can register with a name, email address, and password.
+- Passwords are hashed before they are stored.
+- Duplicate email addresses and invalid credentials return clear errors.
+- Successful registration or login returns a JWT and safe user details.
+- Protected actions require a valid JWT.
+
+### Story 2: Report a lost or found item
+
+As a campus user, I want to publish a lost or found report so that other users can help identify the item.
+
+**Acceptance criteria:**
+
+- An authenticated user can choose `LOST` or `FOUND`.
+- The report accepts title, description, category, location, date, and an optional image URL.
+- Required fields are validated in the client and server.
+- A successful report is stored in MongoDB with `Pending` status.
+- The interface shows loading and success or error feedback.
+
+### Story 3: Search and view reports
+
+As a campus user, I want to search and filter reports so that I can quickly find a matching item.
+
+**Acceptance criteria:**
+
+- Users can search title, description, and location.
+- Users can filter by lost/found type, category, and status.
+- Results come from the live API and MongoDB data.
+- Loading, empty, and error states are displayed clearly.
+- Selecting a result opens its full details, including permitted reporter contact information.
+
+### Story 4: Manage my reports
+
+As a report owner, I want to update, resolve, or delete my reports so that the information stays accurate.
+
+**Acceptance criteria:**
+
+- An authenticated user can view their own reports.
+- Only the owner can edit or delete a report.
+- Only the owner can change a report from `Pending` to `Returned`.
+- The interface provides edit, resolve, and delete actions for owned reports.
+- Unauthorized ownership attempts are rejected by the server with `403`.
+
+### Story 5: Use the portal on any device
+
+As a student using a desktop, tablet, or phone, I want the portal to remain readable and usable at every screen size.
+
+**Acceptance criteria:**
+
+- The layout adapts automatically across desktop, laptop, tablet, and mobile widths.
+- Navigation, forms, cards, modals, and toasts do not cause horizontal overflow.
+- Buttons and fields remain touch-friendly on mobile.
+- The hero card animation is subtle and respects `prefers-reduced-motion`.
+- The production client builds successfully and connects to the deployed API.
+
+## 15. Definition of Done
 
 A change is complete when:
 
